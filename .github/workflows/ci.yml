@@ -30,6 +30,33 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     needs: lint
+
+    # Service containers — это контейнеры, которые GitHub запускает рядом
+    # с job'ом. Они доступны по localhost:<port>.
+    # Именно так гоняют тесты, которым нужна БД/Redis/очередь.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: qahub
+          POSTGRES_PASSWORD: qahub_secret
+          POSTGRES_DB: qahub
+        ports:
+          - 5432:5432
+        # Health check — GitHub ждёт, пока контейнер станет healthy,
+        # прежде чем запускать шаги job'а.
+        options: >-
+          --health-cmd "pg_isready -U qahub -d qahub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Переопределяем DATABASE_URL для CI. В config.py по умолчанию
+      # тоже localhost:5432, но явное лучше неявного.
+      DATABASE_URL: postgresql://qahub:qahub_secret@localhost:5432/qahub
+      DEBUG: "false"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,6 +71,9 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Run migrations
+        run: alembic upgrade head
 
       - name: Run tests
         run: pytest -v
@@ -64,6 +94,6 @@ jobs:
         with:
           context: .
           push: false
-          tags: fastapi-qa-project:ci
+          tags: qa-hub:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max

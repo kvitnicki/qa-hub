@@ -1,15 +1,38 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: qa-hub-db
+    environment:
+      POSTGRES_USER: qahub
+      POSTGRES_PASSWORD: qahub_secret
+      POSTGRES_DB: qahub
+    ports:
+      - "5432:5432"
+    volumes:
+      - qa-hub-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qahub -d qahub"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - qa-network
+
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    image: fastapi-qa-project:latest
-    container_name: qa-api
+    image: qa-hub:latest
+    container_name: qa-hub-api
     ports:
       - "8000:8000"
     environment:
       - APP_ENV=${APP_ENV:-local}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DATABASE_URL=postgresql://qahub:qahub_secret@db:5432/qahub
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -19,6 +42,9 @@ services:
       retries: 3
     networks:
       - qa-network
+
+volumes:
+  qa-hub-db-data:
 
 networks:
   qa-network:
