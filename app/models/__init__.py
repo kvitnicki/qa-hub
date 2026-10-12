@@ -3,7 +3,6 @@
 
 ВАЖНО: Alembic при автогенерации миграций смотрит на Base.metadata
 и видит только те модели, которые были ИМПОРТИРОВАНЫ.
-Поэтому все модели нужно импортировать здесь.
 """
 
 from app.models.project import Project, ProjectMember, ProjectRole
@@ -15,6 +14,7 @@ from app.models.test_case import (
     TestCase,
     TestStep,
 )
+from app.models.test_run import ResultStatus, RunStatus, TestResult, TestRun
 from app.models.test_suite import TestSuite
 from app.models.user import User, UserRole
 
@@ -36,4 +36,9 @@ __all__ = [
     "Severity",
     "CaseType",
     "CaseStatus",
+    # TestRun
+    "TestRun",
+    "TestResult",
+    "RunStatus",
+    "ResultStatus",
 ]
