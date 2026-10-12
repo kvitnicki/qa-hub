@@ -16,7 +16,10 @@ from app.schemas.test_suite import (
     TestSuiteTree,
     TestSuiteUpdate,
 )
-from app.services.project import ProjectNotFoundError
+from app.services.project import (
+    ProjectNotFoundError,
+    check_project_access,
+)
 from app.services.test_suite import (
     SuiteError,
     SuiteNotFoundError,
@@ -43,6 +46,8 @@ def _suite_error_to_http(e: Exception) -> HTTPException:
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+# ---------- Список ----------
+
 @router.get(
     "",
     response_model=list[TestSuiteRead],
@@ -62,8 +67,6 @@ def list_suites(
     - only_roots=true — только корневые сьюты (parent_id IS NULL).
     - parent_id=UUID — только дети конкретного сьюта.
     """
-    from app.services.project import check_project_access
-
     try:
         check_project_access(db, project_id, current_user)
     except Exception as e:
@@ -76,6 +79,8 @@ def list_suites(
         only_roots=only_roots,
     )
 
+
+# ---------- Создание ----------
 
 @router.post(
     "",
@@ -96,6 +101,8 @@ def create_suite_endpoint(
         raise _suite_error_to_http(e)
 
 
+# ---------- Дерево ----------
+
 @router.get(
     "/tree",
     response_model=list[TestSuiteTree],
@@ -111,23 +118,30 @@ def get_suite_tree(
 
     Корневые сьюты с вложенными детьми (рекурсивно).
     """
-    from app.services.project import check_project_access
-
     try:
         check_project_access(db, project_id, current_user)
     except Exception as e:
         raise _suite_error_to_http(e)
 
-    # Получаем все сьюты проекта
     all_suites = suite_crud.get_suites_by_project(db, project_id)
 
-    # Строим дерево в памяти
-    roots: list[TestSuiteTree] = []
-
-    # Клонируем в Pydantic-схемы
     trees: dict[uuid.UUID, TestSuiteTree] = {
-        s.id: TestSuiteTree.model_validate(s) for s in all_suites
+        s.id: TestSuiteTree(
+            id=s.id,
+            project_id=s.project_id,
+            parent_id=s.parent_id,
+            name=s.name,
+            description=s.description,
+            order=s.order,
+            created_by=s.created_by,
+            created_at=s.created_at,
+            updated_at=s.updated_at,
+            children=[],
+        )
+        for s in all_suites
     }
+
+    roots: list[TestSuiteTree] = []
 
     for s in all_suites:
         node = trees[s.id]
@@ -141,6 +155,8 @@ def get_suite_tree(
     return roots
 
 
+# ---------- Получить один ----------
+
 @router.get(
     "/{suite_id}",
     response_model=TestSuiteRead,
@@ -153,8 +169,6 @@ def get_suite(
     current_user: CurrentUser,
 ) -> TestSuiteRead:
     """Возвращает сьют по id."""
-    from app.services.project import check_project_access
-
     try:
         check_project_access(db, project_id, current_user)
     except Exception as e:
@@ -168,6 +182,8 @@ def get_suite(
         )
     return suite
 
+
+# ---------- Обновление ----------
 
 @router.patch(
     "/{suite_id}",
@@ -187,6 +203,8 @@ def update_suite_endpoint(
     except Exception as e:
         raise _suite_error_to_http(e)
 
+
+# ---------- Удаление ----------
 
 @router.delete(
     "/{suite_id}",
