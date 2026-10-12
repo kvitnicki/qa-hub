@@ -150,3 +150,51 @@ def auth_headers(client, test_user_data, registered_user):
     assert response.status_code == 200, f"Login failed: {response.text}"
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+# ---------- Project fixtures ----------
+
+@pytest.fixture
+def project_data():
+    """Данные для создания тестового проекта."""
+    return {
+        "name": "Test Project",
+        "key": "TEST",
+        "description": "Project for testing",
+    }
+
+
+@pytest.fixture
+def project(client, auth_headers, project_data):
+    """
+    Создаёт проект через API и возвращает его данные.
+
+    Использование:
+        def test_something(client, project, auth_headers):
+            project_id = project["id"]
+    """
+    response = client.post(
+        "/api/v1/projects",
+        json=project_data,
+        headers=auth_headers,
+    )
+    assert response.status_code == 201, f"Project creation failed: {response.text}"
+    return response.json()
+
+
+@pytest.fixture
+def second_user_data():
+    """Данные для второго пользователя (для тестов участников)."""
+    return {
+        "email": "second@qahub.io",
+        "username": "seconduser",
+        "password": "secondpass12345",
+        "full_name": "Second User",
+    }
+
+
+@pytest.fixture
+def second_user(client, second_user_data):
+    """Создаёт второго пользователя и возвращает его данные."""
+    response = client.post("/api/v1/auth/register", json=second_user_data)
+    assert response.status_code == 201, f"Second user creation failed: {response.text}"
+    return response.json()
