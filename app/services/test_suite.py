@@ -11,13 +11,11 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.crud import project as project_crud
 from app.crud import test_suite as suite_crud
 from app.models.test_suite import TestSuite
 from app.models.user import User
 from app.schemas.test_suite import TestSuiteCreate, TestSuiteUpdate
 from app.services.project import (
-    ProjectNotFoundError,
     check_project_access,
 )
 
