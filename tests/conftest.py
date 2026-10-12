@@ -198,3 +198,97 @@ def second_user(client, second_user_data):
     response = client.post("/api/v1/auth/register", json=second_user_data)
     assert response.status_code == 201, f"Second user creation failed: {response.text}"
     return response.json()
+# ---------- TestSuite fixtures ----------
+
+@pytest.fixture
+def suite_data():
+    """Данные для создания тестового сьюта."""
+    return {
+        "name": "Login Tests",
+        "description": "All login-related test cases",
+        "order": 0,
+    }
+
+
+@pytest.fixture
+def suite(client, auth_headers, project, suite_data):
+    """Создаёт сьют через API и возвращает его данные."""
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/suites",
+        json=suite_data,
+        headers=auth_headers,
+    )
+    assert response.status_code == 201, f"Suite creation failed: {response.text}"
+    return response.json()
+
+
+@pytest.fixture
+def child_suite(client, auth_headers, project, suite):
+    """Создаёт дочерний сьют (вложенный в suite)."""
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/suites",
+        json={
+            "name": "Password Reset",
+            "description": "Child suite",
+            "parent_id": suite["id"],
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 201, f"Child suite creation failed: {response.text}"
+    return response.json()
+
+
+# ---------- TestCase fixtures ----------
+
+@pytest.fixture
+def case_data():
+    """Данные для создания тест-кейса без шагов."""
+    return {
+        "title": "Login with valid credentials",
+        "description": "Precondition: user exists",
+        "priority": "high",
+        "type": "smoke",
+        "status": "draft",
+    }
+
+
+@pytest.fixture
+def case(client, auth_headers, project, case_data):
+    """Создаёт тест-кейс через API и возвращает его данные."""
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/cases",
+        json=case_data,
+        headers=auth_headers,
+    )
+    assert response.status_code == 201, f"Case creation failed: {response.text}"
+    return response.json()
+
+
+@pytest.fixture
+def case_with_steps(client, auth_headers, project):
+    """Создаёт тест-кейс с 3 шагами."""
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/cases",
+        json={
+            "title": "Full login flow",
+            "priority": "critical",
+            "type": "e2e",
+            "steps": [
+                {
+                    "action": "Open /login page",
+                    "expected_result": "Page loads",
+                },
+                {
+                    "action": "Enter credentials",
+                    "expected_result": "Form submitted",
+                },
+                {
+                    "action": "Check redirect",
+                    "expected_result": "Dashboard opens",
+                },
+            ],
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 201, f"Case with steps failed: {response.text}"
+    return response.json()
