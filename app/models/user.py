@@ -17,21 +17,28 @@ from app.core.database import Base
 
 
 class UserRole(str, Enum):
-    ADMIN = "admin"
-    QA_LEAD = "qa_lead"
-    TESTER = "tester"
-    VIEWER = "viewer"
+    """
+    Роли на уровне платформы.
 
+    - ADMIN: владелец платформы (ты)
+    - MENTOR: верифицированный преподаватель
+    - STUDENT: приглашённый студент
+    - GUEST: зарегистрированный пользователь без доступа к проектам
+    """
+
+    ADMIN = "admin"
+    MENTOR = "mentor"
+    STUDENT = "student"
+    GUEST = "guest"
 
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
         CheckConstraint(
-            "role IN ('admin', 'qa_lead', 'tester', 'viewer')",
+            "role IN ('admin', 'mentor', 'student', 'guest')",
             name="ck_users_role_valid",
         ),
     )
-
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
@@ -52,7 +59,7 @@ class User(Base):
             values_callable=lambda enum_cls: [e.value for e in enum_cls],
         ),
         nullable=False,
-        default=UserRole.TESTER,
+        default=UserRole.GUEST,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

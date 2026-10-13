@@ -65,7 +65,7 @@ class UserCreate(UserBase):
         examples=["SecurePass123!"],
     )
     role: UserRole = Field(
-        default=UserRole.TESTER,
+        default=UserRole.GUEST,
         description="Роль пользователя",
     )
 

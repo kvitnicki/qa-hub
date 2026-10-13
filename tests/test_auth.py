@@ -26,7 +26,7 @@ def test_register_success(client, test_user_data):
     assert data["email"] == test_user_data["email"]
     assert data["username"] == test_user_data["username"]
     assert data["full_name"] == test_user_data["full_name"]
-    assert data["role"] == "tester"  # роль по умолчанию
+    assert data["role"] == "guest"  # роль по умолчанию для нового пользователя
     assert data["is_active"] is True
     assert "id" in data
     assert "created_at" in data
