@@ -6,6 +6,11 @@
 """
 
 from app.models.project import Project, ProjectMember, ProjectRole
+from app.models.mentor_application import (
+    ApplicationStatus,
+    ExperienceLevel,
+    MentorApplication,
+)
 from app.models.test_case import (
     CaseStatus,
     CaseType,
@@ -41,4 +46,8 @@ __all__ = [
     "TestResult",
     "RunStatus",
     "ResultStatus",
+    # MentorApplication
+    "MentorApplication",
+    "ApplicationStatus",
+    "ExperienceLevel",
 ]
