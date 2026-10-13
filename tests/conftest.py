@@ -292,3 +292,73 @@ def case_with_steps(client, auth_headers, project):
     )
     assert response.status_code == 201, f"Case with steps failed: {response.text}"
     return response.json()
+
+
+
+# ---------- TestRun fixtures ----------
+
+@pytest.fixture
+def run_data(case, case_with_steps):
+    """Данные для создания тестового прогона с двумя кейсами."""
+    return {
+        "name": "Test Run",
+        "environment": "staging",
+        "source": "manual",
+        "test_case_ids": [case["id"], case_with_steps["id"]],
+    }
+
+
+@pytest.fixture
+def run(client, auth_headers, project, run_data):
+    """Создаёт прогон через API и возвращает его данные (без результатов)."""
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/runs",
+        json=run_data,
+        headers=auth_headers,
+    )
+    assert response.status_code == 201, f"Run creation failed: {response.text}"
+    return response.json()
+
+
+@pytest.fixture
+def run_with_results(client, auth_headers, project, run):
+    """Возвращает прогон со всеми результатами (из GET /runs/{id})."""
+    response = client.get(
+        f"/api/v1/projects/{project['id']}/runs/{run['id']}",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200, f"Run fetch failed: {response.text}"
+    return response.json()
+
+
+@pytest.fixture
+def completed_run(client, auth_headers, project, run_with_results):
+    """
+    Прогон с двумя результатами: passed + failed.
+
+    Должен автоматически стать completed.
+    """
+    results = run_with_results["results"]
+    run_id = run_with_results["id"]
+
+    # Обновляем первый результат: passed
+    client.patch(
+        f"/api/v1/projects/{project['id']}/runs/{run_id}/results/{results[0]['id']}",
+        json={"status": "passed", "duration_ms": 1200},
+        headers=auth_headers,
+    )
+
+    # Обновляем второй: failed
+    client.patch(
+        f"/api/v1/projects/{project['id']}/runs/{run_id}/results/{results[1]['id']}",
+        json={"status": "failed", "duration_ms": 3500, "comment": "Timeout"},
+        headers=auth_headers,
+    )
+
+    # Возвращаем актуальное состояние
+    response = client.get(
+        f"/api/v1/projects/{project['id']}/runs/{run_id}",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    return response.json()
