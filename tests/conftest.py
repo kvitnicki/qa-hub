@@ -362,3 +362,109 @@ def completed_run(client, auth_headers, project, run_with_results):
     )
     assert response.status_code == 200
     return response.json()
+
+# ---------- MentorApplication fixtures ----------
+
+@pytest.fixture
+def admin_headers(client, db_session):
+    """
+    Заголовки администратора.
+
+    Использует db_session (тестовую сессию), чтобы изменение роли
+    было видно API через dependency_overrides.
+    """
+    from app.crud.user import get_user_by_email
+    from app.models.user import UserRole
+
+    # 1. Регистрируем через API
+    client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "admin_test@qahub.io",
+            "username": "admin_test",
+            "password": "admin12345",
+        },
+    )
+
+    # 2. Меняем роль через ТУ ЖЕ сессию, что у API
+    user = get_user_by_email(db_session, "admin_test@qahub.io")
+    if user:
+        user.role = UserRole.ADMIN
+        db_session.add(user)
+        db_session.commit()
+
+    # 3. Логинимся
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin_test@qahub.io", "password": "admin12345"},
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+    # Повышаем до admin через БД
+    from app.core.database import SessionLocal
+    from app.crud.user import get_user_by_email
+    from app.models.user import UserRole
+
+    db = SessionLocal()
+    try:
+        user = get_user_by_email(db, "admin_test@qahub.io")
+        if user:
+            user.role = UserRole.ADMIN
+            db.add(user)
+            db.commit()
+    finally:
+        db.close()
+
+    # Логинимся
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin_test@qahub.io", "password": "admin12345"},
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def guest_headers(client):
+    """Возвращает заголовки GUEST-пользователя."""
+    client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "guest_test@qahub.io",
+            "username": "guest_test",
+            "password": "guest12345",
+        },
+    )
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "guest_test@qahub.io", "password": "guest12345"},
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def application_data():
+    """Данные для подачи заявки на менторство."""
+    return {
+        "full_name": "Иван Петров",
+        "experience_level": "1-3",
+        "github_url": "https://github.com/ivanpetrov",
+        "linkedin_url": "https://linkedin.com/in/ivanpetrov",
+        "tech_stack": ["pytest", "postman"],
+        "testing_types": ["functional", "regression"],
+        "motivation": "Хочу делиться опытом",
+    }
+
+
+@pytest.fixture
+def application(client, guest_headers, application_data):
+    """Создаёт заявку от GUEST-пользователя."""
+    response = client.post(
+        "/api/v1/mentor-applications",
+        json=application_data,
+        headers=guest_headers,
+    )
+    assert response.status_code == 201, f"Application creation failed: {response.text}"
+    return response.json()
