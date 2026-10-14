@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     auth,
     cohorts,
+    invitations,
     mentor_applications,
     projects,
     test_cases,
@@ -20,6 +21,7 @@ api_router = APIRouter()
 api_router.include_router(auth.router)
 api_router.include_router(mentor_applications.router)
 api_router.include_router(cohorts.router)
+api_router.include_router(invitations.router)
 api_router.include_router(projects.router)
 api_router.include_router(test_suites.router)
 api_router.include_router(test_cases.router)

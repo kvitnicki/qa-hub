@@ -23,7 +23,7 @@ from app.models.test_run import ResultStatus, RunStatus, TestResult, TestRun
 from app.models.test_suite import TestSuite
 from app.models.user import User, UserRole
 from app.models.cohort import Cohort, CohortMember, CohortRole
-
+from app.models.invitation import Invitation, InvitationStatus
 __all__ = [
     # User
     "User",
@@ -54,4 +54,7 @@ __all__ = [
     "Cohort",
     "CohortMember",
     "CohortRole",
+    # Invitation
+    "Invitation",
+    "InvitationStatus",
 ]
