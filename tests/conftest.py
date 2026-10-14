@@ -468,3 +468,81 @@ def application(client, guest_headers, application_data):
     )
     assert response.status_code == 201, f"Application creation failed: {response.text}"
     return response.json()
+
+# ---------- Cohort fixtures ----------
+
+@pytest.fixture
+def mentor_headers(client, db_session):
+    """Возвращает заголовки MENTOR-пользователя."""
+    from app.crud.user import get_user_by_email
+    from app.models.user import UserRole
+
+    # Регистрируем
+    client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "mentor_test@qahub.io",
+            "username": "mentor_test",
+            "password": "mentor12345",
+        },
+    )
+
+    # Повышаем до MENTOR через ту же сессию
+    user = get_user_by_email(db_session, "mentor_test@qahub.io")
+    if user:
+        user.role = UserRole.MENTOR
+        db_session.add(user)
+        db_session.commit()
+
+    # Логинимся
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "mentor_test@qahub.io", "password": "mentor12345"},
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def cohort_data():
+    """Данные для создания когорты."""
+    return {
+        "name": "QA-2026-Осень",
+        "description": "Тестовая когорта",
+    }
+
+
+@pytest.fixture
+def cohort(client, mentor_headers, cohort_data):
+    """Создаёт когорту через API."""
+    response = client.post(
+        "/api/v1/cohorts",
+        json=cohort_data,
+        headers=mentor_headers,
+    )
+    assert response.status_code == 201, f"Cohort creation failed: {response.text}"
+    return response.json()
+
+
+@pytest.fixture
+def student_user(client, db_session):
+    """Создаёт STUDENT-пользователя (через API + смена роли)."""
+    from app.crud.user import get_user_by_email
+    from app.models.user import UserRole
+
+    client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "student_test@qahub.io",
+            "username": "student_test",
+            "password": "student12345",
+        },
+    )
+
+    user = get_user_by_email(db_session, "student_test@qahub.io")
+    if user:
+        user.role = UserRole.STUDENT
+        db_session.add(user)
+        db_session.commit()
+
+    return {"id": str(user.id), "email": user.email, "username": user.username}
