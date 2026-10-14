@@ -22,7 +22,7 @@ from app.models.test_case import (
 from app.models.test_run import ResultStatus, RunStatus, TestResult, TestRun
 from app.models.test_suite import TestSuite
 from app.models.user import User, UserRole
-
+from app.models.cohort import Cohort, CohortMember, CohortRole
 
 __all__ = [
     # User
@@ -50,4 +50,8 @@ __all__ = [
     "MentorApplication",
     "ApplicationStatus",
     "ExperienceLevel",
+    # Cohort
+    "Cohort",
+    "CohortMember",
+    "CohortRole",
 ]
