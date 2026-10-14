@@ -99,14 +99,26 @@ def create_invitation(
     """
     cohort = check_cohort_owner(db, cohort_id, user)
 
-    # Email уже студент (в любой когорте)?
+    # Email уже зарегистрирован?
     existing_user = user_crud.get_user_by_email(db, data.email)
     if existing_user is not None:
+        # Уже студент по роли? (не важно, в когорте или нет)
+        if existing_user.role == UserRole.STUDENT:
+            raise EmailAlreadyInCohortError(
+                f"Email {data.email} is already a student"
+            )
+        # Уже ментор или админ?
+        if existing_user.role in (UserRole.MENTOR, UserRole.ADMIN):
+            raise EmailAlreadyInCohortError(
+                f"Email {data.email} is already a {existing_user.role.value}"
+            )
+        # Или в когорте (на случай рассогласования)?
         existing_member = cohort_crud.get_student_cohort(db, existing_user.id)
         if existing_member is not None:
             raise EmailAlreadyInCohortError(
                 f"Email {data.email} is already a student"
-            )    
+            )
+
 # Email уже студент (в любой когорте)?
     existing_user = user_crud.get_user_by_email(db, data.email)
     if existing_user is not None:

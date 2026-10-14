@@ -546,3 +546,50 @@ def student_user(client, db_session):
         db_session.commit()
 
     return {"id": str(user.id), "email": user.email, "username": user.username}
+# ---------- Invitation fixtures ----------
+
+@pytest.fixture
+def invitation_data():
+    """Данные для создания приглашения."""
+    return {
+        "email": "invited_student@qahub.io",
+        "message": "Привет! Приглашаю в когорту",
+    }
+
+
+@pytest.fixture
+def invitation(client, mentor_headers, cohort, invitation_data):
+    """Создаёт приглашение через API."""
+    response = client.post(
+        f"/api/v1/cohorts/{cohort['id']}/invitations",
+        json=invitation_data,
+        headers=mentor_headers,
+    )
+    assert response.status_code == 201, f"Invitation creation failed: {response.text}"
+    return response.json()
+
+
+@pytest.fixture
+def invited_student_data():
+    """Данные для регистрации приглашённого студента."""
+    return {
+        "email": "invited_student@qahub.io",
+        "username": "invited_student",
+        "password": "student12345",
+    }
+
+
+@pytest.fixture
+def invited_student_token(client, invited_student_data):
+    """Регистрирует и логинит приглашённого студента (GUEST)."""
+    client.post("/api/v1/auth/register", json=invited_student_data)
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": invited_student_data["email"],
+            "password": invited_student_data["password"],
+        },
+    )
+    assert response.status_code == 200, f"Login failed: {response.text}"
+    token = response.json()["access_token"]
+    return token
