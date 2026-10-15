@@ -1,10 +1,11 @@
 # qa-hub
 
 [![CI](https://github.com/kvitnicki/qa-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/kvitnicki/qa-hub/actions/workflows/ci.yml)
+[![CD](https://github.com/kvitnicki/qa-hub/actions/workflows/cd.yml/badge.svg)](https://github.com/kvitnicki/qa-hub/actions/workflows/cd.yml)
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)
-![Tests](https://img.shields.io/badge/tests-46%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-185%20passed-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 > **Test Case Management System** — open-source платформа для управления тест-кейсами, сьютами, прогонами и результатами.
@@ -68,7 +69,37 @@
     └── README.md
 
 ---
+---
 
+## 🌐 Live Demo
+
+Проект развёрнут на VPS и автоматически обновляется через CD.
+
+- **API:** http://185.149.144.127:8000
+- **Swagger UI:** http://185.149.144.127:8000/docs
+- **ReDoc:** http://185.149.144.127:8000/redoc
+
+**Демо-аккаунты:**
+
+| Роль | Email | Пароль |
+|------|-------|--------|
+| Admin | `admin@qahub.io` | `admin12345` |
+| Mentor | `mentor_test@qahub.io` | `mentor12345` |
+| Student | `new-student@qahub.io` | `newstudent12345` |
+
+---
+
+## 🚀 Как это работает
+
+**CI/CD Pipeline:**
+
+**Технологии инфраструктуры:**
+- **VPS:** Ubuntu 24.04
+- **Docker:** multi-stage builds, non-root user
+- **PostgreSQL 16:** в отдельном контейнере
+- **Nginx:** (позже) reverse proxy + HTTPS
+- **GitHub Actions:** CI + CD
+- **GHCR:** GitHub Container Registry
 ## Быстрый старт
 
 ### Требования
