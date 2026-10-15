@@ -82,21 +82,20 @@ jobs:
           script: |
             set -e
             
-            # Авторизуемся в GHCR
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Переходим в папку проекта
             cd ~/qa-hub
             
-            # Обновляем образ
             export GITHUB_REPOSITORY=${{ github.repository }}
             export IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}
             docker compose pull
             docker compose up -d --remove-orphans
             
-            # Ждём, пока контейнер станет healthy
-            sleep 10
-            docker compose ps
+            echo "Waiting for API to be healthy..."
+            sleep 15
             
-            # Очистка старых образов
+            echo "Running migrations..."
+            docker compose exec -T api alembic upgrade head
+            
+            docker compose ps
             docker image prune -f

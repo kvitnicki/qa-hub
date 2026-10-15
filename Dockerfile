@@ -16,6 +16,9 @@ WORKDIR /app
 
 COPY --from=builder /root/.local /home/appuser/.local
 COPY app/ ./app/
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
+
 
 RUN chown -R appuser:appuser /app
 
