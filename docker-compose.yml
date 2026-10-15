@@ -9,42 +9,35 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - qa-hub-db-data:/var/lib/postgresql/data
+      - qahub_pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U qahub -d qahub"]
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
     networks:
       - qa-network
 
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: qa-hub:latest
-    container_name: qa-hub-api
+    image: ghcr.io/${GITHUB_REPOSITORY:-kvitnicki/qa-hub}:${IMAGE_TAG:-latest}
+    container_name: qa-api
     ports:
       - "8000:8000"
     environment:
-      - APP_ENV=${APP_ENV:-local}
+      - APP_ENV=${APP_ENV:-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - DATABASE_URL=postgresql://qahub:qahub_secret@db:5432/qahub
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 5s
-      start_period: 10s
-      retries: 3
     networks:
       - qa-network
 
 volumes:
-  qa-hub-db-data:
+  qahub_pgdata:
 
 networks:
   qa-network:
