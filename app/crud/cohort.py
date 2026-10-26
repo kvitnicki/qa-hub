@@ -6,6 +6,7 @@ CRUD-операции для Cohort и CohortMember.
 - Ментор может быть в нескольких.
 - Max студентов на когорту — проверка в сервисе.
 - Авто-создание при переполнении — в сервисе.
+- Имя когорты уникально в рамках ментора.
 """
 
 import uuid
@@ -22,6 +23,23 @@ from app.schemas.cohort import CohortCreate, CohortUpdate
 def get_cohort_by_id(db: Session, cohort_id: uuid.UUID) -> Cohort | None:
     """Находит когорту по id."""
     stmt = select(Cohort).where(Cohort.id == cohort_id)
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def get_cohort_by_mentor_and_name(
+    db: Session,
+    mentor_id: uuid.UUID,
+    name: str,
+) -> Cohort | None:
+    """
+    Находит когорту по ментору и имени.
+
+    Используется для проверки уникальности имени в рамках ментора.
+    """
+    stmt = select(Cohort).where(
+        Cohort.mentor_id == mentor_id,
+        Cohort.name == name,
+    )
     return db.execute(stmt).scalar_one_or_none()
 
 
@@ -49,9 +67,6 @@ def get_active_cohort_with_space(
 ) -> Cohort | None:
     """
     Находит активную (не архивную) когорту ментора с местом (<max_students).
-
-    Используется для авто-добавления студентов.
-    Если нет — сервис создаёт новую.
     """
     stmt = (
         select(Cohort)
@@ -94,9 +109,7 @@ def create_cohort(
     mentor_id: uuid.UUID,
     data: CohortCreate,
 ) -> Cohort:
-    """
-    Создаёт когорту и автоматически добавляет ментора как mentor-участника.
-    """
+    """Создаёт когорту и автоматически добавляет ментора как mentor-участника."""
     cohort = Cohort(
         mentor_id=mentor_id,
         name=data.name,
@@ -105,7 +118,6 @@ def create_cohort(
     db.add(cohort)
     db.flush()
 
-    # Ментор автоматически в когорте
     member = CohortMember(
         cohort_id=cohort.id,
         user_id=mentor_id,
@@ -178,11 +190,7 @@ def get_student_cohort(
     db: Session,
     user_id: uuid.UUID,
 ) -> CohortMember | None:
-    """
-    Находит когорту, в которой user — студент.
-
-    Гарантированно одна (partial unique).
-    """
+    """Находит когорту, в которой user — студент."""
     stmt = select(CohortMember).where(
         CohortMember.user_id == user_id,
         CohortMember.role == CohortRole.STUDENT,

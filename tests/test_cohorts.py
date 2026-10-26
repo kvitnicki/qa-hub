@@ -416,3 +416,59 @@ def test_other_mentor_cannot_see_cohort(
     )
 
     assert response.status_code == 403
+
+
+
+# ---------- Уникальность имени когорты ----------
+
+def test_create_cohort_duplicate_name(
+    client, mentor_headers, cohort_data, cohort
+):
+    """Дубликат имени когорты у одного ментора — 409."""
+    response = client.post(
+        "/api/v1/cohorts",
+        json=cohort_data,  # то же имя, что у cohort
+        headers=mentor_headers,
+    )
+
+    assert response.status_code == 409
+    assert "already have a cohort named" in response.json()["detail"]
+
+
+def test_create_cohort_same_name_different_mentor(
+    client, mentor_headers, cohort_data, cohort, db_session
+):
+    """Разные менторы могут иметь когорты с одинаковыми именами."""
+    from app.crud.user import get_user_by_email
+    from app.models.user import UserRole
+
+    # Второй ментор
+    client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "mentor2@qahub.io",
+            "username": "mentor2",
+            "password": "mentor12345",
+        },
+    )
+
+    user2 = get_user_by_email(db_session, "mentor2@qahub.io")
+    if user2:
+        user2.role = UserRole.MENTOR
+        db_session.add(user2)
+        db_session.commit()
+
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "mentor2@qahub.io", "password": "mentor12345"},
+    )
+    mentor2_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    # Второй ментор создаёт когорту с тем же именем — должно работать
+    response = client.post(
+        "/api/v1/cohorts",
+        json=cohort_data,
+        headers=mentor2_headers,
+    )
+
+    assert response.status_code == 201

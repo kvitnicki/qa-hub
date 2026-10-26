@@ -19,6 +19,7 @@ from app.schemas.cohort import (
 )
 from app.services.cohort import (
     CohortError,
+    CohortNameAlreadyExistsError,
     CohortNotFoundError,
     MemberAlreadyExistsError,
     MemberNotFoundError,
@@ -44,7 +45,7 @@ def _cohort_error_to_http(e: Exception) -> HTTPException:
     """Маппит доменные исключения когорт в HTTPException."""
     if isinstance(e, (CohortNotFoundError, MemberNotFoundError, UserNotFoundError)):
         return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    if isinstance(e, (MemberAlreadyExistsError, StudentAlreadyInCohortError)):
+    if isinstance(e, (MemberAlreadyExistsError, StudentAlreadyInCohortError, CohortNameAlreadyExistsError)):
         return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     if isinstance(e, (NotMentorError, NotCohortOwnerError)):
         return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))

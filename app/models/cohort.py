@@ -9,6 +9,7 @@ CohortMember — участник когорты с ролью (mentor/student).
 - Ментор может быть в нескольких когортах.
 - Max 5 студентов на когорту (проверка в сервисе).
 - Авто-создание при переполнении.
+- Имя когорты уникально в рамках ментора.
 """
 
 import uuid
@@ -51,9 +52,15 @@ class Cohort(Base):
 
     Один ментор может иметь несколько когорт.
     Студенты распределяются по когортам (max 5 на когорту).
+    Имя когорты уникально в рамках ментора.
     """
 
     __tablename__ = "cohorts"
+    __table_args__ = (
+        UniqueConstraint(
+            "mentor_id", "name", name="uq_cohorts_mentor_name"
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -79,7 +86,6 @@ class Cohort(Base):
         nullable=False,
     )
 
-    # Отношения
     members: Mapped[list["CohortMember"]] = relationship(
         back_populates="cohort",
         cascade="all, delete-orphan",
@@ -101,18 +107,15 @@ class CohortMember(Base):
 
     __tablename__ = "cohort_members"
     __table_args__ = (
-        # Один пользователь один раз в когорте
         UniqueConstraint(
             "cohort_id", "user_id", name="uq_cohort_members_cohort_user"
         ),
-        # Студент только в одной когорте (partial unique index)
         Index(
             "ix_cohort_members_unique_student",
             "user_id",
             unique=True,
             postgresql_where="role = 'student'",
         ),
-        # Валидация роли
         CheckConstraint(
             "role IN ('mentor', 'student')",
             name="ck_cohort_members_role_valid",
@@ -149,7 +152,6 @@ class CohortMember(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    # Отношения
     cohort: Mapped["Cohort"] = relationship(back_populates="members")
     user: Mapped["User"] = relationship("User", lazy="selectin")
 

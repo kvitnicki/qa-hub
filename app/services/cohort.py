@@ -10,8 +10,8 @@
 
 import uuid
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
 from app.crud import cohort as cohort_crud
 from app.crud import user as user_crud
 from app.models.cohort import Cohort, CohortMember, CohortRole
@@ -36,6 +36,8 @@ class CohortNotFoundError(CohortError):
 class MemberNotFoundError(CohortError):
     """Участник не найден."""
 
+class CohortNameAlreadyExistsError(CohortError):
+    """Когорта с таким именем у этого ментора уже есть."""
 
 class NotMentorError(CohortError):
     """Только MENTOR или ADMIN могут создавать когорты."""
@@ -102,8 +104,27 @@ def create_cohort(
             f"Only MENTOR or ADMIN can create cohorts (current role: {user.role.value})"
         )
 
-    return cohort_crud.create_cohort(db, mentor_id=user.id, data=data)
+    # Проверка уникальности имени в рамках ментора
+    existing = cohort_crud.get_cohort_by_mentor_and_name(
+        db, mentor_id=user.id, name=data.name
+    )
+    print (f"DEBUG: existing = {existing}, mentor_id = {user.id}, name = {data.name}")
+    if existing is not None:
+        raise CohortNameAlreadyExistsError(
+            f"You already have a cohort named '{data.name}'. "
+            f"Please choose a different name."
+        )
 
+    try:
+        return cohort_crud.create_cohort(db, mentor_id=user.id, data=data)
+    except IntegrityError as e:
+        db.rollback()
+        if "uq_cohorts_mentor_name" in str(e):
+            raise CohortNameAlreadyExistsError(
+                f"You already have a cohort named '{data.name}'. "
+                f"Please choose a different name."
+            ) from e
+        raise
 
 def update_cohort(
     db: Session,

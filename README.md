@@ -155,7 +155,18 @@ Swagger: http://localhost:8000/docs
 - `test_members.py` — 12 тестов (участники, защита owner'а).
 
 ---
+---
 
+## 🧪 Postman + Newman
+
+Для ручного и автоматического тестирования API есть Postman-коллекция.
+
+**Локально:**
+
+```bash
+newman run postman/qa-hub.postman_collection.json \
+  -e postman/qa-hub.postman_environment.json \
+  --reporters cli
 ## API Endpoints
 
 ### Auth
