@@ -59,6 +59,29 @@ def get_cohorts_by_mentor(
     stmt = stmt.order_by(Cohort.created_at.desc()).offset(skip).limit(limit)
     return list(db.execute(stmt).scalars().all())
 
+def get_cohorts_by_student(
+    db: Session,
+    student_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100,
+) -> list[Cohort]:
+    """
+    Когорты, где студент — участник.
+
+    Используется для /cohorts, когда user.role == STUDENT.
+    """
+    stmt = (
+        select(Cohort)
+        .join(CohortMember, CohortMember.cohort_id == Cohort.id)
+        .where(
+            CohortMember.user_id == student_id,
+            CohortMember.role == CohortRole.STUDENT,
+        )
+        .order_by(Cohort.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    return list(db.execute(stmt).scalars().all())
 
 def get_active_cohort_with_space(
     db: Session,

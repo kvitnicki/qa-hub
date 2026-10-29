@@ -74,6 +74,16 @@ def list_cohorts(
     - MENTOR видит свои когорты.
     - ADMIN видит все когорты.
     """
+    from app.models.user import UserRole
+
+    if current_user.role == UserRole.STUDENT:
+        return cohort_crud.get_cohorts_by_student(
+            db,
+            student_id=current_user.id,
+            skip=skip,
+            limit=limit,
+        )
+
     return cohort_crud.get_cohorts_by_mentor(
         db,
         mentor_id=current_user.id,
@@ -193,19 +203,40 @@ def delete_cohort_endpoint(
     response_model=list[CohortMemberRead],
     summary="Список участников когорты",
 )
+@router.get(
+    "/{cohort_id}/members",
+    response_model=list[CohortMemberRead],
+    summary="Список участников когорты",
+)
 def list_members(
     cohort_id: uuid.UUID,
     db: DbSession,
     current_user: CurrentUser,
 ) -> list[CohortMemberRead]:
-    """Участники когорты."""
+    """
+    Участники когорты.
+
+    - MENTOR/ADMIN: только для своих когорт (owner).
+    - STUDENT: только для своей когорты (где он участник).
+    - GUEST: 404 (не светим существование).
+    """
+    from app.models.user import UserRole
+
     try:
-        check_cohort_owner(db, cohort_id, current_user)
+        if current_user.role == UserRole.STUDENT:
+            # Студент видит участников только своей когорты
+            member = cohort_crud.get_member(db, cohort_id, current_user.id)
+            if member is None:
+                raise CohortNotFoundError(
+                    f"Cohort {cohort_id} not found"
+                )
+        else:
+            # Ментор/админ — только своих когорт
+            check_cohort_owner(db, cohort_id, current_user)
     except Exception as e:
         raise _cohort_error_to_http(e)
 
     return cohort_crud.get_members_by_cohort(db, cohort_id)
-
 
 @router.post(
     "/{cohort_id}/members",

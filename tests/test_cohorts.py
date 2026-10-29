@@ -472,3 +472,70 @@ def test_create_cohort_same_name_different_mentor(
     )
 
     assert response.status_code == 201
+
+
+
+# ---------- Студент видит участников когорты ----------
+
+def test_student_sees_members_of_own_cohort(
+    client, mentor_headers, cohort, student_user, db_session
+):
+    """Студент видит участников своей когорты."""
+
+    # Добавляем студента в когорту
+    client.post(
+        f"/api/v1/cohorts/{cohort['id']}/members",
+        json={"user_id": student_user["id"], "role": "student"},
+        headers=mentor_headers,
+    )
+
+    # Логинимся как студент
+    login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": student_user["email"],
+            "password": "student12345",
+        },
+    )
+    student_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    # Студент видит участников своей когорты
+    response = client.get(
+        f"/api/v1/cohorts/{cohort['id']}/members",
+        headers=student_headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2  # mentor + student
+
+
+def test_student_cannot_see_members_of_foreign_cohort(
+    client, mentor_headers, cohort, student_user, db_session
+):
+    """Студент не видит участников чужой когорты — 404."""
+
+    # Создаём вторую когорту (студент не в ней)
+    cohort2 = client.post(
+        "/api/v1/cohorts",
+        json={"name": "Вторая когорта"},
+        headers=mentor_headers,
+    ).json()
+
+    # Логинимся как студент
+    login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": student_user["email"],
+            "password": "student12345",
+        },
+    )
+    student_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    # Пытаемся получить участников чужой когорты
+    response = client.get(
+        f"/api/v1/cohorts/{cohort2['id']}/members",
+        headers=student_headers,
+    )
+
+    assert response.status_code == 404
