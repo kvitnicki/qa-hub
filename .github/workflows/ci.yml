@@ -77,6 +77,34 @@ jobs:
 
       - name: Run tests
         run: pytest -v
+            - name: Start API in background
+        run: |
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          echo $! > /tmp/uvicorn.pid
+          for i in {1..30}; do
+            if curl -s http://localhost:8000/health | grep -q healthy; then
+              echo "API is up"
+              break
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 1
+          done
+
+      - name: Install Newman
+        run: npm install -g newman
+
+      - name: Run Newman tests
+        run: |
+          newman run postman/qa-hub.postman_collection.json \
+            -e postman/qa-hub-ci.postman_environment.json \
+            --reporters cli
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f /tmp/uvicorn.pid ]; then
+            kill $(cat /tmp/uvicorn.pid) || true
+          fi
 
   build:
     name: Build Docker image
